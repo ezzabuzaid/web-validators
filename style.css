@@ -1,0 +1,78 @@
+/*
+  A material design form field
+  Expects this html (note the required attribute on the input):
+  <div class="material-form-field">
+  <input type="text" required/>
+  <label class="material-form-field-label">Form field title</label>
+  </div>
+  */
+.material-form-field {
+  font-family: "Roboto", sans-serif;
+  font-size: 14px;
+  position: relative;
+  display: block;
+  color: #000000;
+  padding: 25px 0 10px 0;
+}
+.material-form-field::after {
+  content: "\00A0";
+  display: block;
+  color: #d50000;
+  font-size: 12px;
+  padding-top: 5px;
+}
+.material-form-field .material-form-field-label {
+  position: absolute;
+  display: block;
+  top: 35px;
+  left: 0px;
+  transition: 0.2s ease all;
+  -moz-transition: 0.2s ease all;
+  -webkit-transition: 0.2s ease all;
+  pointer-events: none;
+  cursor: text;
+}
+.material-form-field input {
+  padding: 10px 0 10px 0;
+  display: block;
+  width: 100%;
+  border: none;
+  font-size: 14px;
+  color: #000000;
+  border-bottom: 1px solid #000000;
+  outline: none;
+}
+.material-form-field input:invalid {
+  outline: none;
+  box-shadow: none;
+}
+.material-form-field input:valid ~ .material-form-field-label,
+.material-form-field input:focus ~ .material-form-field-label {
+  top: 10px;
+  font-size: 12px;
+}
+.material-form-field input:focus {
+  outline: none;
+  color: #3f51b5;
+  padding-bottom: 8px;
+  border-bottom-width: 3px;
+  border-bottom-color: #3f51b5;
+}
+.material-form-field input:focus ~ .material-form-field-label {
+  color: #3f51b5;
+}
+.material-form-field.material-form-field-invalid {
+  color: #d50000;
+}
+.material-form-field.material-form-field-invalid::after {
+  content: attr(data-validationError);
+}
+.material-form-field.material-form-field-invalid input:focus ~ .material-form-field-label {
+  color: #d50000;
+}
+
+.container {
+  width: 400px;
+  margin: 20px auto;
+  font-family: "Roboto", sans-serif;
+}
