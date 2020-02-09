@@ -80,6 +80,14 @@ class FormGroup extends HTMLElement {
         return this._controls;
     }
 
+    get(controlName) {
+        return this.controls.find(control => control.name === controlName);
+    }
+
+    addControl(control) {
+        this.controls.push(control);
+    }
+
     get valid() {
         return this.controls.every(control => control.valid);
     }
@@ -97,14 +105,6 @@ class FormGroup extends HTMLElement {
         });
     }
 
-    get(controlName) {
-        return this.controls.find(control => control.name === controlName);
-    }
-
-    addControl(control) {
-        this.controls.push(control);
-    }
-
     addValidator(...validators) {
         this.controls.forEach(control => control.addValidator(...validators));
     }
@@ -115,6 +115,13 @@ class FormGroup extends HTMLElement {
 
     disable() {
         this.controls.forEach(control => control.disable());
+    }
+
+    get errors() {
+        return this.controls.reduce((acc, control) => {
+            acc[control.name] = control.errors;
+            return acc;
+        }, {})
     }
 
 }
