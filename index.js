@@ -1,34 +1,84 @@
 const formControlSelector = 'form-control';
 const formGroupSelector = 'form-group';
 
-const validators = {
-    required() {
-        return (value) => value !== ''
-    },
-    pattern(regex) {
-        return (value) => !regex.test(value);
-    },
-    minlength(number) {
-        return (value) => value.length >= number;
-    },
-    maxlength(number) {
-        return (value) => value.length <= number;
+class Validator {
+    constructor(name) {
+        this.name = name;
     }
+}
 
+const validators = {
+    required: class Required extends Validator {
+        constructor() {
+            super('required');
+        }
+        check(value) {
+            return value !== '';
+        }
+    },
+    pattern: class Pattern extends Validator {
+        constructor(regex) {
+            super('pattern');
+            this.regex = regex;
+        }
+        check(value) {
+            return !this.regex.test(value);
+        }
+    },
+    minlength: class MinLength extends Validator {
+        constructor(length) {
+            super('minlength');
+            this.length = +length;
+        }
+        check(value) {
+            return value.length >= this.length;
+        }
+    },
+    maxlength: class MaxLength extends Validator {
+        constructor(length) {
+            super('maxlength');
+            this.length = +length;
+        }
+        check(value) {
+            return value.length <= this.length;
+        }
+    },
+    min: class Min extends Validator {
+        constructor(length) {
+            super('min');
+            this.length = +length;
+        }
+        check(value) {
+            return value >= this.length;
+        }
+    },
+    max: class Max extends Validator {
+        constructor(length) {
+            super('max');
+            this.length = +length;
+        }
+        check(value) {
+            return value <= this.length;
+        }
+    },
 }
 
 class FormGroup extends HTMLElement {
 
     constructor() {
         super();
+        this._controls = []
+        this._validators = []
     }
 
     connectedCallback() { }
 
     get controls() {
-        return Array.from(this.querySelectorAll(formControlSelector));
+        if (this._controls.length === 0) {
+            this._controls = Array.from(this.querySelectorAll(formControlSelector));
+        }
+        return this._controls;
     }
-
 
     get valid() {
         return this.controls.every(control => control.valid);
@@ -47,56 +97,115 @@ class FormGroup extends HTMLElement {
         });
     }
 
-    get(name) {
-        return this.controls.find(control => control.name === name);
+    get(controlName) {
+        return this.controls.find(control => control.name === controlName);
+    }
+
+    addControl(control) {
+        this.controls.push(control);
+    }
+
+    addValidator(...validators) {
+        this.controls.forEach(control => control.addValidator(...validators));
+    }
+
+    enable() {
+        this.controls.forEach(control => control.enable());
+    }
+
+    disable() {
+        this.controls.forEach(control => control.disable());
     }
 
 }
 class FormControl extends HTMLElement {
-    // TODO: check if there's no input element
     constructor() {
         super();
         this.validators = [];
-        this.name = null;
+        this._input = null;
     }
 
-    static get observedAttributes() {
-        return ['name'];
+    connectedCallback() {
+        setTimeout(() => {
+            const inputs = this.querySelectorAll('input');
+            this._input = inputs[0];
+            if (!this._input) {
+                throw new Error(`${formControlSelector} should have <input>`);
+            }
+            if (inputs.length > 1) {
+                throw new Error(`${formControlSelector} should contain one <input>`);
+            }
+            this._populateValidators();
+        });
     }
 
-    attributeChangedCallback(name, oldValue, newValue) {
-        switch (name) {
-            case 'name':
-                this.name = newValue;
-                break;
-
-            default:
-                break;
+    _populateValidators() {
+        for (let validator in validators) {
+            const constraint = this._input.attributes[validator];
+            if (constraint) {
+                this.validators.push(new validators[validator](constraint.value));
+                this.setAttribute(constraint.name, constraint.value);
+                // this._input.removeAttribute(constraint.name);
+            }
         }
     }
 
+    get name() {
+        return this.getAttribute('name');
+    }
+
     get value() {
-        return this.querySelector('input').value;
+        return this._input.value;
     }
 
     get valid() {
-        return this.validators.every(validator => validator(this.value));
+        return this.validators.every(validator => validator.check(this.value));
     }
 
     get errors() {
-        return this.validators.reduce((acc, validator) => {
-            acc[validator.name] = validator.check(this.value);
-            return acc;
-        }, {});
+        return this.validators.length < 1
+            ? null
+            : this.validators.reduce((acc, validator) => {
+                acc[validator.name] = !validator.check(this.value);
+                return acc;
+            }, {});
     }
+
+    addValidator(...newValidators) {
+        this.validators.push(...newValidators);
+        const getValidatorIndex = (validatorName) => array.findIndex(validator => validator.name === validatorName)
+        this.validators.filter((validator, index, array) => getValidatorIndex(validator.name) === index);
+    }
+
+    removeValidator(validator) {
+        const validatorIndex = this.validators.findIndex(existValidator => existValidator.name === validator.name);
+        if (validatorIndex < 0) {
+            throw new TypeError('validator is not found');
+        }
+        this.validators.splice(validatorIndex, 1);
+    }
+
+    cleanValidators() {
+        this.validators = [];
+    }
+
+    enable() {
+        this._input.removeAttribute('readonly');
+        this._input.removeAttribute('disabled');
+    }
+
+    disable() {
+        this._input.setAttribute('readonly', true);
+        this._input.setAttribute('disabled', true);
+    }
+
 }
 
 window.customElements.define(formControlSelector, FormControl);
 window.customElements.define(formGroupSelector, FormGroup);
 
-// const nameControl = new FormControl('value', [
-//     // validators.maxlength(5),
-//     // validators.minlength(4),
-//     // validators.pattern(/^[\w\s\u0621-\u064A]+$/),
-//     validators.required(),
-// ]);
+
+const formGroup = new FormGroup();
+formGroup.addValidator(new validators.required());
+
+const formControl = new FormControl();
